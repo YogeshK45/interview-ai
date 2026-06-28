@@ -53,8 +53,8 @@ An intelligent full-stack web application that helps candidates prepare for jobs
 
 ### 1️⃣ Clone the repository
 
-git clone https://github.com/YogeshRajput82/jobhelp.git
-cd jobhelp
+git clone https://github.com/YogeshK45/interview-ai.git
+cd interview-ai
 
 
 ### 2️⃣ Backend Setup
@@ -107,4 +107,4 @@ JWT_SECRET=your_secret_key
 
 ## 👨‍💻 Author
 
-Developed by **Yogesh Rajput**
+Developed by **Yogesh Kumar**
