@@ -1,27 +1,30 @@
-import { useAuth } from "../hooks/useAuth";
-import { Navigate } from "react-router";
 import React from 'react'
+import { useAuth } from "../hooks/useAuth"
+import { Navigate } from "react-router"
 
-const Protected = ({children}) => {
-    const { loading, user, handleLogout } = useAuth()
+const Protected = ({ children }) => {
+    const { loading, user } = useAuth()
 
-
-    if(loading){
-        return (<main><h1>Loading...</h1></main>)
+    if (loading) {
+        return (
+            <main className="loading-screen" style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                height: '100vh',
+                background: '#0f172a',
+                color: '#f8fafc'
+            }}>
+                <h1>Loading application...</h1>
+            </main>
+        )
     }
 
-    if(!user){
-        return <Navigate to={'/login'} />
+    if (!user) {
+        return <Navigate to="/login" replace />
     }
-    
-    return (
-        <>
-            <button type="button" className="logout-btn" onClick={handleLogout}>
-                Logout
-            </button>
-            {children}
-        </>
-    )
+
+    return children
 }
 
 export default Protected

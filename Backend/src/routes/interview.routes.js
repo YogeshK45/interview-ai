@@ -5,45 +5,39 @@ const upload = require("../middlewares/file.middleware")
 
 const interviewRouter = express.Router()
 
-
-
 /**
  * @route POST /api/interview/
- * @description generate new interview report on the basis of user self description,resume pdf and job description.
+ * @description Generate new interview report based on self description, resume PDF, and job description.
  * @access private
  */
 interviewRouter.post("/", authMiddleware.authUser, upload.single("resume"), interviewController.generateInterViewReportController)
 
 /**
  * @route GET /api/interview/report/:interviewId
- * @description get interview report by interviewId.
+ * @description Get interview report by interviewId.
  * @access private
  */
 interviewRouter.get("/report/:interviewId", authMiddleware.authUser, interviewController.getInterviewReportByIdController)
 
-
 /**
  * @route GET /api/interview/
- * @description get all interview reports of logged in user.
+ * @description Get all interview reports of logged in user.
  * @access private
  */
 interviewRouter.get("/", authMiddleware.authUser, interviewController.getAllInterviewReportsController)
 
 /**
  * @route DELETE /api/interview/:interviewId
- * @description delete interview report by interviewId.
+ * @description Delete interview report by interviewId.
  * @access private
  */
 interviewRouter.delete("/:interviewId", authMiddleware.authUser, interviewController.deleteInterviewReportController)
 
-
 /**
- * @route GET /api/interview/resume/pdf
- * @description generate resume pdf on the basis of user self description, resume content and job description.
+ * @route POST /api/interview/report/pdf/:interviewReportId
+ * @description Generate professional Interview Report PDF.
  * @access private
  */
-interviewRouter.post("/resume/pdf/:interviewReportId", authMiddleware.authUser, interviewController.generateResumePdfController)
-
-
+interviewRouter.post("/report/pdf/:interviewReportId", authMiddleware.authUser, interviewController.generateReportPdfController)
 
 module.exports = interviewRouter

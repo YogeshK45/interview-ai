@@ -5,7 +5,6 @@ import { useNavigate } from 'react-router'
 import { useAuth } from '../../auth/hooks/useAuth.js'
 
 const Home = () => {
-
     const { loading, generateReport, reports, removeReport } = useInterview()
     const { user, handleLogout, loading: authLoading } = useAuth()
     const [ jobDescription, setJobDescription ] = useState("")
@@ -19,22 +18,43 @@ const Home = () => {
 
     const handleGenerateReport = async () => {
         setErrorMessage("")
-        const resumeFile = resumeInputRef.current.files[ 0 ]
-        
-        // Check if job description is provided
+        const resumeFile = resumeInputRef.current?.files?.[ 0 ]
+
+        // Validate Job Description
         if (!jobDescription.trim()) {
-            alert("Job description is required.")
+            setErrorMessage("Target Job Description is required.")
             return
         }
-        
-        // Check if at least one of self description or resume is provided
+
+        if (jobDescription.trim().length < 20) {
+            setErrorMessage("Job description should be at least 20 characters long.")
+            return
+        }
+
+        // Validate Candidate Profile (Resume or Self Description)
         if (!selfDescription.trim() && !resumeFile) {
-            alert("Either self description or resume (or both) is required.")
+            setErrorMessage("Either a PDF Resume or a Quick Self-Description (or both) is required.")
             return
         }
-        
+
+        // Validate Resume file type & size if attached
+        if (resumeFile) {
+            if (resumeFile.type !== "application/pdf" && !resumeFile.name.endsWith(".pdf")) {
+                setErrorMessage("Only PDF resume files are supported.")
+                return
+            }
+            if (resumeFile.size > 10 * 1024 * 1024) {
+                setErrorMessage("Resume file size exceeds the 10MB limit.")
+                return
+            }
+        }
+
         try {
-            const data = await generateReport({ jobDescription, selfDescription, resumeFile })
+            const data = await generateReport({
+                jobDescription: jobDescription.trim(),
+                selfDescription: selfDescription.trim(),
+                resumeFile
+            })
             if (!data?._id) {
                 setErrorMessage("Failed to generate report. Please try again.")
                 return
@@ -46,8 +66,23 @@ const Home = () => {
     }
 
     const handleResumeChange = (e) => {
+        setErrorMessage("")
         const file = e.target.files?.[ 0 ]
         if (!file) {
+            setResumeMeta(null)
+            return
+        }
+
+        if (file.type !== "application/pdf" && !file.name.endsWith(".pdf")) {
+            setErrorMessage("Invalid file format. Only PDF files are allowed.")
+            e.target.value = ""
+            setResumeMeta(null)
+            return
+        }
+
+        if (file.size > 10 * 1024 * 1024) {
+            setErrorMessage("File size exceeds 10MB limit.")
+            e.target.value = ""
             setResumeMeta(null)
             return
         }
@@ -58,12 +93,12 @@ const Home = () => {
         })
     }
 
-    if (loading) {
-        return (
-            <main className='loading-screen'>
-                <h1>Loading your interview plan...</h1>
-            </main>
-        )
+    const clearResumeFile = (e) => {
+        e.stopPropagation()
+        if (resumeInputRef.current) {
+            resumeInputRef.current.value = ""
+        }
+        setResumeMeta(null)
     }
 
     return (
@@ -99,12 +134,14 @@ const Home = () => {
                             <span className='badge badge--required'>Required</span>
                         </div>
                         <textarea
-                            onChange={(e) => { setJobDescription(e.target.value) }}
+                            value={jobDescription}
+                            onChange={(e) => setJobDescription(e.target.value)}
                             className='panel__textarea'
                             placeholder={`Paste the full job description here...\ne.g. 'Senior Frontend Engineer at Google requires proficiency in React, TypeScript, and large-scale system design...'`}
                             maxLength={5000}
                         />
-                        <div className='char-counter'>0 / 5000 chars</div>
+                        {/* Live Character Counter Fix */}
+                        <div className='char-counter'>{jobDescription.length} / 5000 characters</div>
                     </div>
 
                     {/* Vertical Divider */}
@@ -132,15 +169,39 @@ const Home = () => {
                                 <p className='dropzone__title'>Click to upload or drag &amp; drop</p>
                                 <p className='dropzone__subtitle'>PDF only (Max 10MB)</p>
                                 {resumeMeta && (
-                                    <p className='dropzone__file'>
-                                        Selected: <strong>{resumeMeta.name}</strong> ({resumeMeta.sizeMb} MB)
-                                    </p>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
+                                        <p className='dropzone__file' style={{ margin: 0 }}>
+                                            Selected: <strong>{resumeMeta.name}</strong> ({resumeMeta.sizeMb} MB)
+                                        </p>
+                                        <button
+                                            type="button"
+                                            onClick={clearResumeFile}
+                                            style={{
+                                                background: 'none',
+                                                border: 'none',
+                                                color: '#ef4444',
+                                                cursor: 'pointer',
+                                                fontWeight: 'bold'
+                                            }}
+                                        >
+                                            &times; Remove
+                                        </button>
+                                    </div>
                                 )}
                                 <input onChange={handleResumeChange} ref={resumeInputRef} hidden type='file' id='resume' name='resume' accept='.pdf' />
                             </label>
                         </div>
+
                         {errorMessage && (
-                            <div className="error-banner" role="alert">
+                            <div className="error-banner" role="alert" style={{
+                                background: 'rgba(239, 68, 68, 0.15)',
+                                border: '1px solid rgba(239, 68, 68, 0.3)',
+                                color: '#f87171',
+                                padding: '10px 14px',
+                                borderRadius: '8px',
+                                marginTop: '12px',
+                                fontSize: '13px'
+                            }}>
                                 {errorMessage}
                             </div>
                         )}
@@ -152,7 +213,8 @@ const Home = () => {
                         <div className='self-description'>
                             <label className='section-label' htmlFor='selfDescription'>Quick Self-Description</label>
                             <textarea
-                                onChange={(e) => { setSelfDescription(e.target.value) }}
+                                value={selfDescription}
+                                onChange={(e) => setSelfDescription(e.target.value)}
                                 id='selfDescription'
                                 name='selfDescription'
                                 className='panel__textarea panel__textarea--short'
@@ -172,12 +234,15 @@ const Home = () => {
 
                 {/* Card Footer */}
                 <div className='interview-card__footer'>
-                    <span className='footer-info'>AI-Powered Strategy Generation &bull; Approx 30s</span>
+                    <span className='footer-info'>AI-Powered Strategy Generation &bull; Fast Generation</span>
                     <button
                         onClick={handleGenerateReport}
-                        className='generate-btn'>
+                        disabled={loading}
+                        className='generate-btn'
+                        style={{ opacity: loading ? 0.7 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}
+                    >
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z" /></svg>
-                        Generate My Interview Strategy
+                        {loading ? "Generating Your Plan..." : "Generate My Interview Strategy"}
                     </button>
                 </div>
             </div>
@@ -207,7 +272,16 @@ const Home = () => {
                                     <div className="report-item__main" onClick={() => navigate(`/interview/${report._id}`)}>
                                         <h3>{report.title || 'Untitled Position'}</h3>
                                         <p className='report-meta'>Generated on {new Date(report.createdAt).toLocaleDateString()}</p>
-                                        <p className={`match-score ${report.matchScore >= 80 ? 'score--high' : report.matchScore >= 60 ? 'score--mid' : 'score--low'}`}>Match Score: {report.matchScore}%</p>
+                                        <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                                            <span className={`match-score ${report.matchScore >= 80 ? 'score--high' : report.matchScore >= 60 ? 'score--mid' : 'score--low'}`}>
+                                                Match: {report.matchScore || 0}%
+                                            </span>
+                                            {report.atsScore !== undefined && (
+                                                <span className="match-score score--high" style={{ background: 'rgba(52, 211, 153, 0.15)', color: '#34d399' }}>
+                                                    ATS: {report.atsScore}%
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                     <button
                                         type="button"
