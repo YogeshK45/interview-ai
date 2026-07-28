@@ -1,14 +1,15 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useCallback } from 'react'
 import "../style/home.scss"
 import { useInterview } from '../hooks/useInterview.js'
 import { useNavigate } from 'react-router'
 import { useAuth } from '../../auth/hooks/useAuth.js'
 
 const Home = () => {
-    const { loading, generateReport, reports, removeReport } = useInterview()
+    const { loading, progressMessage, generateReport, reports, removeReport } = useInterview()
     const { user, handleLogout, loading: authLoading } = useAuth()
     const [ jobDescription, setJobDescription ] = useState("")
     const [ selfDescription, setSelfDescription ] = useState("")
+    const [ preparationDuration, setPreparationDuration ] = useState("30_days")
     const [ resumeMeta, setResumeMeta ] = useState(null)
     const [ reportQuery, setReportQuery ] = useState("")
     const [ errorMessage, setErrorMessage ] = useState("")
@@ -16,7 +17,8 @@ const Home = () => {
 
     const navigate = useNavigate()
 
-    const handleGenerateReport = async () => {
+    const handleGenerateReport = useCallback(async () => {
+        if (loading) return;
         setErrorMessage("")
         const resumeFile = resumeInputRef.current?.files?.[ 0 ]
 
@@ -37,7 +39,6 @@ const Home = () => {
             return
         }
 
-        // Validate Resume file type & size if attached
         if (resumeFile) {
             if (resumeFile.type !== "application/pdf" && !resumeFile.name.endsWith(".pdf")) {
                 setErrorMessage("Only PDF resume files are supported.")
@@ -53,7 +54,8 @@ const Home = () => {
             const data = await generateReport({
                 jobDescription: jobDescription.trim(),
                 selfDescription: selfDescription.trim(),
-                resumeFile
+                resumeFile,
+                preparationDuration
             })
             if (!data?._id) {
                 setErrorMessage("Failed to generate report. Please try again.")
@@ -63,7 +65,7 @@ const Home = () => {
         } catch (e) {
             setErrorMessage(e?.message || "Failed to generate report. Please try again.")
         }
-    }
+    }, [ loading, jobDescription, selfDescription, preparationDuration, generateReport, navigate ])
 
     const handleResumeChange = (e) => {
         setErrorMessage("")
@@ -108,7 +110,7 @@ const Home = () => {
                     type="button"
                     className="logout-btn"
                     onClick={handleLogout}
-                    disabled={authLoading}
+                    disabled={authLoading || loading}
                 >
                     {authLoading ? "Logging out..." : "Logout"}
                 </button>
@@ -136,11 +138,11 @@ const Home = () => {
                         <textarea
                             value={jobDescription}
                             onChange={(e) => setJobDescription(e.target.value)}
+                            disabled={loading}
                             className='panel__textarea'
                             placeholder={`Paste the full job description here...\ne.g. 'Senior Frontend Engineer at Google requires proficiency in React, TypeScript, and large-scale system design...'`}
                             maxLength={5000}
                         />
-                        {/* Live Character Counter Fix */}
                         <div className='char-counter'>{jobDescription.length} / 5000 characters</div>
                     </div>
 
@@ -162,7 +164,7 @@ const Home = () => {
                                 Upload Resume
                                 <span className='badge badge--best'>Best Results</span>
                             </label>
-                            <label className='dropzone' htmlFor='resume'>
+                            <label className={`dropzone ${loading ? 'dropzone--disabled' : ''}`} htmlFor='resume' style={{ opacity: loading ? 0.6 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}>
                                 <span className='dropzone__icon'>
                                     <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 16 12 12 8 16" /><line x1="12" y1="12" x2="12" y2="21" /><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" /></svg>
                                 </span>
@@ -173,22 +175,24 @@ const Home = () => {
                                         <p className='dropzone__file' style={{ margin: 0 }}>
                                             Selected: <strong>{resumeMeta.name}</strong> ({resumeMeta.sizeMb} MB)
                                         </p>
-                                        <button
-                                            type="button"
-                                            onClick={clearResumeFile}
-                                            style={{
-                                                background: 'none',
-                                                border: 'none',
-                                                color: '#ef4444',
-                                                cursor: 'pointer',
-                                                fontWeight: 'bold'
-                                            }}
-                                        >
-                                            &times; Remove
-                                        </button>
+                                        {!loading && (
+                                            <button
+                                                type="button"
+                                                onClick={clearResumeFile}
+                                                style={{
+                                                    background: 'none',
+                                                    border: 'none',
+                                                    color: '#ef4444',
+                                                    cursor: 'pointer',
+                                                    fontWeight: 'bold'
+                                                }}
+                                            >
+                                                &times; Remove
+                                            </button>
+                                        )}
                                     </div>
                                 )}
-                                <input onChange={handleResumeChange} ref={resumeInputRef} hidden type='file' id='resume' name='resume' accept='.pdf' />
+                                <input onChange={handleResumeChange} ref={resumeInputRef} disabled={loading} hidden type='file' id='resume' name='resume' accept='.pdf' />
                             </label>
                         </div>
 
@@ -215,6 +219,7 @@ const Home = () => {
                             <textarea
                                 value={selfDescription}
                                 onChange={(e) => setSelfDescription(e.target.value)}
+                                disabled={loading}
                                 id='selfDescription'
                                 name='selfDescription'
                                 className='panel__textarea panel__textarea--short'
@@ -232,17 +237,89 @@ const Home = () => {
                     </div>
                 </div>
 
+                {/* Progress banner when loading */}
+                {loading && (
+                    <div className="progress-banner" style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        background: 'rgba(99, 102, 241, 0.12)',
+                        border: '1px solid rgba(99, 102, 241, 0.3)',
+                        color: '#a5b4fc',
+                        padding: '12px 20px',
+                        margin: '0 24px',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        fontWeight: 500
+                    }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'spin 1s linear infinite' }}>
+                            <circle cx="12" cy="12" r="10" strokeDasharray="32" strokeDashoffset="10" />
+                        </svg>
+                        <span>{progressMessage || "Generating your plan..."}</span>
+                        <style>{`
+                            @keyframes spin {
+                                0% { transform: rotate(0deg); }
+                                100% { transform: rotate(360deg); }
+                            }
+                        `}</style>
+                    </div>
+                )}
+
                 {/* Card Footer */}
-                <div className='interview-card__footer'>
-                    <span className='footer-info'>AI-Powered Strategy Generation &bull; Fast Generation</span>
+                <div className='interview-card__footer' style={{ flexWrap: 'wrap', gap: '1rem' }}>
+                    <div className='prep-time-selector' style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <label htmlFor='prepDuration' style={{ fontSize: '0.85rem', color: '#7d8590', fontWeight: 500 }}>
+                            Preparation Time:
+                        </label>
+                        <select
+                            id='prepDuration'
+                            value={preparationDuration}
+                            onChange={(e) => setPreparationDuration(e.target.value)}
+                            disabled={loading}
+                            style={{
+                                backgroundColor: '#1e2535',
+                                color: '#e6edf3',
+                                border: '1px solid #2a3348',
+                                borderRadius: '0.5rem',
+                                padding: '0.45rem 0.75rem',
+                                fontSize: '0.85rem',
+                                outline: 'none',
+                                cursor: loading ? 'not-allowed' : 'pointer'
+                            }}
+                        >
+                            <option value="30_minutes">Interview in 30 Minutes</option>
+                            <option value="1_hour">Interview in 1 Hour</option>
+                            <option value="2_hours">Interview in 2 Hours</option>
+                            <option value="tomorrow">Interview Tomorrow</option>
+                            <option value="3_days">3 Days</option>
+                            <option value="7_days">7 Days</option>
+                            <option value="15_days">15 Days</option>
+                            <option value="30_days">30 Days (Default)</option>
+                            <option value="60_days">60 Days</option>
+                            <option value="90_days">90 Days</option>
+                        </select>
+                    </div>
+
                     <button
+                        type="button"
                         onClick={handleGenerateReport}
                         disabled={loading}
                         className='generate-btn'
-                        style={{ opacity: loading ? 0.7 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}
+                        style={{ opacity: loading ? 0.7 : 1, cursor: loading ? 'not-allowed' : 'pointer', marginLeft: 'auto' }}
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z" /></svg>
-                        {loading ? "Generating Your Plan..." : "Generate My Interview Strategy"}
+                        {loading ? (
+                            <>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ animation: 'spin 1s linear infinite' }}>
+                                    <circle cx="12" cy="12" r="10" strokeDasharray="32" strokeDashoffset="10" />
+                                </svg>
+                                <span>Generating Plan...</span>
+                            </>
+                        ) : (
+                            <>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z" /></svg>
+                                <span>Generate My Interview Strategy</span>
+                            </>
+                        )}
                     </button>
                 </div>
             </div>
@@ -258,6 +335,7 @@ const Home = () => {
                             placeholder="Search reports..."
                             value={reportQuery}
                             onChange={(e) => setReportQuery(e.target.value)}
+                            disabled={loading}
                         />
                     </div>
                     <ul className='reports-list'>
@@ -269,10 +347,10 @@ const Home = () => {
                             })
                             .map(report => (
                                 <li key={report._id} className='report-item'>
-                                    <div className="report-item__main" onClick={() => navigate(`/interview/${report._id}`)}>
+                                    <div className="report-item__main" onClick={() => !loading && navigate(`/interview/${report._id}`)}>
                                         <h3>{report.title || 'Untitled Position'}</h3>
                                         <p className='report-meta'>Generated on {new Date(report.createdAt).toLocaleDateString()}</p>
-                                        <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                                        <div style={{ display: 'flex', gap: '8px', marginTop: '4px', flexWrap: 'wrap' }}>
                                             <span className={`match-score ${report.matchScore >= 80 ? 'score--high' : report.matchScore >= 60 ? 'score--mid' : 'score--low'}`}>
                                                 Match: {report.matchScore || 0}%
                                             </span>
@@ -281,12 +359,21 @@ const Home = () => {
                                                     ATS: {report.atsScore}%
                                                 </span>
                                             )}
+                                            {report.status && (
+                                                <span className="match-score" style={{
+                                                    background: report.status === 'completed' ? 'rgba(59, 130, 246, 0.15)' : report.status === 'pending' ? 'rgba(234, 179, 8, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                                                    color: report.status === 'completed' ? '#60a5fa' : report.status === 'pending' ? '#facc15' : '#f87171'
+                                                }}>
+                                                    {report.status.toUpperCase()}
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
                                     <button
                                         type="button"
                                         className="report-delete"
                                         onClick={() => removeReport(report._id)}
+                                        disabled={loading}
                                     >
                                         Delete
                                     </button>

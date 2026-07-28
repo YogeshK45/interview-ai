@@ -3,14 +3,31 @@ import '../style/interview.scss'
 import { useInterview } from '../hooks/useInterview.js'
 import { useNavigate, useParams } from 'react-router'
 
-const NAV_ITEMS = [
+const getPreparationPlanTitle = (duration) => {
+    switch (duration) {
+        case '30_minutes': return '30-Minute Revision Plan';
+        case '1_hour': return '1-Hour Preparation Strategy';
+        case '2_hours': return '2-Hour Preparation Schedule';
+        case 'tomorrow': return 'Tomorrow Interview Preparation Plan';
+        case '3_days': return '3-Day Preparation Plan';
+        case '7_days': return '7-Day Preparation Plan';
+        case '15_days': return '15-Day Preparation Plan';
+        case '60_days': return '60-Day Preparation Plan';
+        case '90_days': return '90-Day Preparation Plan';
+        case '30_days':
+        default:
+            return '30-Day Preparation Plan';
+    }
+}
+
+const getNavItems = (duration) => [
     { id: 'technical', label: 'Technical Questions', icon: (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg>) },
     { id: 'behavioral', label: 'Behavioral Questions', icon: (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>) },
     { id: 'hr', label: 'HR Questions', icon: (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>) },
     { id: 'project', label: 'Project Questions', icon: (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>) },
     { id: 'coding', label: 'Coding Questions', icon: (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="8 6 2 12 8 18" /><polyline points="16 18 22 12 16 6" /></svg>) },
     { id: 'systemDesign', label: 'System Design', icon: (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>) },
-    { id: 'roadmap', label: '30-Day Study Plan', icon: (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11" /></svg>) },
+    { id: 'roadmap', label: getPreparationPlanTitle(duration), icon: (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11" /></svg>) },
     { id: 'recommendations', label: 'Final Recommendations', icon: (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>) },
 ]
 
@@ -42,22 +59,27 @@ const QuestionCard = ({ item, index }) => {
     )
 }
 
-const RoadMapDay = ({ day }) => (
-    <div className='roadmap-day'>
-        <div className='roadmap-day__header'>
-            <span className='roadmap-day__badge'>Day {day.day}</span>
-            <h3 className='roadmap-day__focus'>{day.focus}</h3>
+const RoadMapDay = ({ day, duration }) => {
+    const isShortTime = duration === '30_minutes' || duration === '1_hour' || duration === '2_hours' || duration === 'tomorrow';
+    const badgeLabel = isShortTime ? `Step ${day.day}` : `Day ${day.day}`;
+
+    return (
+        <div className='roadmap-day'>
+            <div className='roadmap-day__header'>
+                <span className='roadmap-day__badge'>{badgeLabel}</span>
+                <h3 className='roadmap-day__focus'>{day.focus}</h3>
+            </div>
+            <ul className='roadmap-day__tasks'>
+                {(day.tasks || []).map((task, i) => (
+                    <li key={i}>
+                        <span className='roadmap-day__bullet' />
+                        {task}
+                    </li>
+                ))}
+            </ul>
         </div>
-        <ul className='roadmap-day__tasks'>
-            {(day.tasks || []).map((task, i) => (
-                <li key={i}>
-                    <span className='roadmap-day__bullet' />
-                    {task}
-                </li>
-            ))}
-        </ul>
-    </div>
-)
+    )
+}
 
 // ── Main Component ────────────────────────────────────────────────────────────
 const Interview = () => {
@@ -79,6 +101,8 @@ const Interview = () => {
             </main>
         )
     }
+
+    const navItems = getNavItems(report.preparationDuration)
 
     const matchScoreColor =
         (report.matchScore || 0) >= 80 ? 'score--high' :
@@ -134,7 +158,7 @@ const Interview = () => {
                 <nav className='interview-nav'>
                     <div className="nav-content">
                         <p className='interview-nav__label'>Report Sections</p>
-                        {NAV_ITEMS.map(item => (
+                        {navItems.map(item => (
                             <button
                                 key={item.id}
                                 className={`interview-nav__item ${activeNav === item.id ? 'interview-nav__item--active' : ''}`}
@@ -191,12 +215,12 @@ const Interview = () => {
                     {activeNav === 'roadmap' && (
                         <section>
                             <div className='content-header'>
-                                <h2>30-Day Preparation Plan</h2>
-                                <span className='content-header__count'>{(report.preparationPlan || []).length} days</span>
+                                <h2>{getPreparationPlanTitle(report.preparationDuration)}</h2>
+                                <span className='content-header__count'>{(report.preparationPlan || []).length} steps</span>
                             </div>
                             <div className='roadmap-list'>
                                 {(report.preparationPlan || []).map((day) => (
-                                    <RoadMapDay key={day.day} day={day} />
+                                    <RoadMapDay key={day.day} day={day} duration={report.preparationDuration} />
                                 ))}
                             </div>
                         </section>
