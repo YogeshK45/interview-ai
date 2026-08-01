@@ -4,7 +4,7 @@ import axios from "axios";
  * Axios instance with baseline configurations
  */
 const api = axios.create({
-    baseURL: "http://localhost:3000",
+    baseURL: import.meta.env.VITE_API_URL,
     withCredentials: true,
 });
 
@@ -17,7 +17,7 @@ export const generateInterviewReport = async ({ jobDescription, selfDescription,
     formData.append("jobDescription", jobDescription);
     formData.append("selfDescription", selfDescription);
     formData.append("preparationDuration", preparationDuration);
-    
+
     if (resumeFile) {
         formData.append("resume", resumeFile);
     }
