@@ -1,7 +1,8 @@
 const { GoogleGenAI } = require("@google/genai")
 const { z } = require("zod")
 const { zodToJsonSchema } = require("zod-to-json-schema")
-const puppeteer = require("puppeteer")
+const chromium = require("@sparticuz/chromium")
+const puppeteer = require("puppeteer-core")
 const pdfParse = require("pdf-parse")
 const crypto = require("crypto")
 
@@ -14,20 +15,36 @@ const FAST_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 const ai = new GoogleGenAI({ apiKey });
 
 let browserInstance = null;
+
+/**
+ * Reusable Puppeteer-Core Browser instance configured with @sparticuz/chromium
+ * for Render Linux instances and Cloud / Serverless environments.
+ */
 async function getBrowser() {
     if (!browserInstance || !browserInstance.isConnected()) {
+        let execPath = await chromium.executablePath();
+
+        // Local development fallback if running locally on macOS/Windows
+        if (!execPath) {
+            if (process.platform === "darwin") {
+                execPath = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+            } else if (process.platform === "win32") {
+                execPath = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
+            } else {
+                execPath = "/usr/bin/google-chrome";
+            }
+        }
+
         browserInstance = await puppeteer.launch({
-            headless: true,
-            args: [
+            args: chromium.args || [
                 "--no-sandbox",
                 "--disable-setuid-sandbox",
                 "--disable-dev-shm-usage",
-                "--disable-accelerated-2d-canvas",
-                "--no-first-run",
-                "--no-zygote",
-                "--single-process",
                 "--disable-gpu"
-            ]
+            ],
+            defaultViewport: chromium.defaultViewport || { width: 1200, height: 800 },
+            executablePath: execPath,
+            headless: chromium.headless !== undefined ? chromium.headless : true,
         });
     }
     return browserInstance;
