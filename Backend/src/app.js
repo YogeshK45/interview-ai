@@ -11,7 +11,15 @@ app.use(cookieParser())
 
 app.use(cors({
     origin: (origin, callback) => {
-        if (!origin || /^http:\/\/localhost:\d+$/.test(origin) || /^http:\/\/127\.0\.0\.1:\d+$/.test(origin)) {
+        // Allow requests with no origin (e.g. mobile apps, server-to-server)
+        // or local development origins, or any .onrender.com frontend deployment
+        if (
+            !origin ||
+            /^http:\/\/localhost:\d+$/.test(origin) ||
+            /^http:\/\/127\.0\.0\.1:\d+$/.test(origin) ||
+            /\.onrender\.com$/.test(origin) ||
+            (process.env.FRONTEND_URL && origin === process.env.FRONTEND_URL)
+        ) {
             callback(null, true)
         } else {
             callback(new Error("Not allowed by CORS"))

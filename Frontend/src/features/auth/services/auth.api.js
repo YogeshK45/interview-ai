@@ -1,7 +1,10 @@
 import axios from "axios"
 
+// Dynamically select API URL from Vite environment variables or fallback to Render backend
+const API_URL = import.meta.env.VITE_API_URL || "https://interview-ai-backend-hlcw.onrender.com";
+
 const api = axios.create({
-    baseURL: "http://localhost:3000",
+    baseURL: API_URL,
     withCredentials: true
 })
 

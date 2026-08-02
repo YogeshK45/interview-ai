@@ -3,9 +3,11 @@ const bcrypt = require("bcryptjs")
 const jwt = require("jsonwebtoken")
 const tokenBlacklistModel = require("../models/blacklist.model")
 
+// Cross-domain cookie configuration for production deployment (Render) vs local development
 const COOKIE_OPTIONS = {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    secure: process.env.NODE_ENV === "production",
     maxAge: 24 * 60 * 60 * 1000 // 1 day
 }
 
