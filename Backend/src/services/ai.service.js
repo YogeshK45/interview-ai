@@ -1,7 +1,8 @@
 const { GoogleGenAI } = require("@google/genai")
 const { z } = require("zod")
 const { zodToJsonSchema } = require("zod-to-json-schema")
-const chromium = require("@sparticuz/chromium")
+const chromiumModule = require("@sparticuz/chromium")
+const chromium = chromiumModule.default || chromiumModule
 const puppeteer = require("puppeteer-core")
 const pdfParse = require("pdf-parse")
 const crypto = require("crypto")
@@ -19,10 +20,16 @@ let browserInstance = null;
 /**
  * Reusable Puppeteer-Core Browser instance configured with @sparticuz/chromium
  * for Render Linux instances and Cloud / Serverless environments.
+ * Uses `chromiumModule.default || chromiumModule` to safely handle CommonJS export resolution.
  */
 async function getBrowser() {
     if (!browserInstance || !browserInstance.isConnected()) {
-        let execPath = await chromium.executablePath();
+        let execPath = "";
+        try {
+            execPath = await chromium.executablePath();
+        } catch (err) {
+            console.warn("[CHROMIUM WARNING] Failed to get chromium.executablePath():", err.message);
+        }
 
         // Local development fallback if running locally on macOS/Windows
         if (!execPath) {
